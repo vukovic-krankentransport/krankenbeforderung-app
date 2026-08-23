@@ -197,7 +197,8 @@
         const res = await fetch('/api/trips');
         const data = await res.json();
         
-        const mojeVoznje = data.filter(t => (t.fahrzeug === mojeVozilo || !t.fahrzeug) && t.status !== '5. Erledigt');
+        // Prihvata naloge namenjene striktno ovom vozilu
+        const mojeVoznje = data.filter(t => t.fahrzeug === mojeVozilo && t.status !== '5. Erledigt');
 
         if (mojeVoznje.length > 0) {
           const trip = mojeVoznje[0];
@@ -231,14 +232,16 @@
             document.getElementById('btnNachGmaps').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.nach)}`;
           }
         } else {
-          document.getElementById('noDataMsg').innerText = "Kein aktiver Auftrag";
+          document.getElementById('noDataMsg').innerText = "Kein aktiver Auftrag für " + mojeVozilo;
           document.getElementById('noDataMsg').style.display = 'flex';
           document.getElementById('tripDetails').style.display = 'none';
           currentTripId = null;
           currentStatusIndex = 0;
           renderStatusBtn();
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error("Greška pri učitavanju vožnji:", err);
+      }
     }
 
     function renderStatusBtn() {
@@ -246,8 +249,12 @@
     }
 
     async function promeniStatus() {
-      if (!currentTripId) return;
+      if (!currentTripId) {
+        alert("Nema aktivnog naloga za promenu statusa!");
+        return;
+      }
 
+      const mojeVozilo = localStorage.getItem('izabranoVozilo');
       const sledeciIndex = (currentStatusIndex + 1) % statusList.length;
       const noviStatus = statusList[sledeciIndex];
 
@@ -257,7 +264,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             status: noviStatus,
-            changed_by: 'Vozac'
+            changed_by: mojeVozilo || 'Vozac'
           })
         });
 
@@ -273,8 +280,6 @@
             currentStatusIndex = 0;
             renderStatusBtn();
           }
-          
-          await ucitajVoznje();
         } else {
           alert('Greška pri čuvanju statusa u bazi!');
         }
