@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1787514024365,
+    "fahrzeug": "Fahrzeug 1",
+    "sender": "Vozac",
+    "text": "sss",
+    "time": "09:40 PM"
+  },
+  {
+    "id": 1787514034853,
+    "fahrzeug": "Fahrzeug 1",
+    "sender": "Disponent",
+    "text": "sdad",
+    "time": "09:40 PM"
+  },
+  {
+    "id": 1787514237064,
+    "fahrzeug": "Fahrzeug 1",
+    "sender": "Vozac",
+    "text": "fewfw",
+    "time": "09:43 PM"
+  },
+  {
+    "id": 1787514245802,
+    "fahrzeug": "Fahrzeug 1",
+    "sender": "Disponent",
+    "text": "fewfew",
+    "time": "09:44 PM"
+  },
+  {
+    "id": 1787514258002,
+    "fahrzeug": "Fahrzeug 1",
+    "sender": "Vozac",
+    "text": "ffefe",
+    "time": "09:44 PM"
+  }
+]
