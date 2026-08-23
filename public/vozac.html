@@ -248,24 +248,38 @@
     async function promeniStatus() {
       if (!currentTripId) return;
 
-      currentStatusIndex = (currentStatusIndex + 1) % statusList.length;
-      const noviStatus = statusList[currentStatusIndex];
-      renderStatusBtn();
+      const sledeciIndex = (currentStatusIndex + 1) % statusList.length;
+      const noviStatus = statusList[sledeciIndex];
 
-      await fetch(`/api/trips/${currentTripId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: noviStatus })
-      });
+      try {
+        const res = await fetch(`/api/trips/${currentTripId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            status: noviStatus,
+            changed_by: 'Vozac'
+          })
+        });
 
-      if (noviStatus === "5. Erledigt") {
-        document.getElementById('tripDetails').style.display = 'none';
-        document.getElementById('noDataMsg').innerText = "Kein aktiver Auftrag";
-        document.getElementById('noDataMsg').style.display = 'flex';
-        currentTripId = null;
-        currentStatusIndex = 0;
-        renderStatusBtn();
-        ucitajVoznje();
+        if (res.ok) {
+          currentStatusIndex = sledeciIndex;
+          renderStatusBtn();
+
+          if (noviStatus === "5. Erledigt") {
+            document.getElementById('tripDetails').style.display = 'none';
+            document.getElementById('noDataMsg').innerText = "Kein aktiver Auftrag";
+            document.getElementById('noDataMsg').style.display = 'flex';
+            currentTripId = null;
+            currentStatusIndex = 0;
+            renderStatusBtn();
+          }
+          
+          await ucitajVoznje();
+        } else {
+          alert('Greška pri čuvanju statusa u bazi!');
+        }
+      } catch (err) {
+        console.error('Mrežna greška pri promeni statusa:', err);
       }
     }
 
