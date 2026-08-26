@@ -1,12 +1,10 @@
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
-const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -15,7 +13,6 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Automatska inicijalizacija tabela u bazi
 async function initDb() {
   try {
     await pool.query(`
@@ -47,21 +44,19 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log("PostgreSQL tabele uspešno provere/kreirane.");
+    console.log("PostgreSQL tabele spremne.");
   } catch (err) {
-    console.error("Greška pri inicijalizaciji baze:", err);
+    console.error("Greška sa bazom:", err);
   }
 }
 initDb();
 
-// --- API ZA ZADATKE / VOŽNJE ---
-
+// VOŽNJE / ZADACI
 app.get('/api/trips', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM trips ORDER BY id DESC');
     res.json(result.rows);
   } catch (err) {
-    console.error("Greška pri dohvatanju zadataka:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -76,7 +71,7 @@ app.post('/api/trips', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error("Greška pri kreiranju zadatka:", err);
+    console.error("Greška pri unosu zadatka:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -91,13 +86,11 @@ app.put('/api/trips/:id/status', async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("Greška pri izmeni statusa:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// --- API ZA CHAT ---
-
+// CHAT
 app.get('/api/chat', async (req, res) => {
   const { fahrzeug } = req.query;
   try {
@@ -109,7 +102,6 @@ app.get('/api/chat', async (req, res) => {
     }
     res.json(result.rows);
   } catch (err) {
-    console.error("Greška pri dohvatanju chata:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -130,5 +122,5 @@ app.post('/api/chat', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server pokrenut na portu ${port}`);
+  console.log(`Server radi na portu ${port}`);
 });
