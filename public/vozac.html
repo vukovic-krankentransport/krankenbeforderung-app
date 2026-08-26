@@ -170,8 +170,6 @@
         const res = await fetch('/api/trips');
         const data = await res.json();
         
-        if (!Array.isArray(data)) return;
-
         const mojeVoznje = data.filter(t => t.fahrzeug === mojeVozilo && t.status !== '5. Erledigt');
 
         if (mojeVoznje.length > 0) {
@@ -214,7 +212,7 @@
           renderStatusBtn();
         }
       } catch (err) {
-        console.error("Greška pri dohvatanju vožnji:", err);
+        console.error("Greška:", err);
       }
     }
 
@@ -228,6 +226,7 @@
         return;
       }
 
+      const mojeVozilo = localStorage.getItem('izabranoVozilo');
       const sledeciIndex = (currentStatusIndex + 1) % statusList.length;
       const noviStatus = statusList[sledeciIndex];
 
@@ -252,7 +251,7 @@
           }
         }
       } catch (err) {
-        console.error('Greška pri izmeni statusa:', err);
+        console.error('Greška:', err);
       }
     }
 
@@ -265,8 +264,6 @@
         const res = await fetch(`/api/chat?fahrzeug=${encodeURIComponent(mojeVozilo)}`);
         const messages = await res.json();
         
-        if (!Array.isArray(messages)) return;
-
         const box = document.getElementById('chatBox');
         box.innerHTML = '';
 
@@ -277,9 +274,7 @@
           box.appendChild(div);
         });
         box.scrollTop = box.scrollHeight;
-      } catch(e) {
-        console.error("Greška pri dohvatanju poruka:", e);
-      }
+      } catch(e) {}
     }
 
     async function sendChatMessage() {
@@ -292,7 +287,7 @@
       if (!input.value.trim()) return;
 
       try {
-        const res = await fetch('/api/chat', {
+        await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -302,12 +297,10 @@
           })
         });
 
-        if (res.ok) {
-          input.value = '';
-          ucitajChat();
-        }
+        input.value = '';
+        ucitajChat();
       } catch(e) {
-        console.error("Greška pri slanju poruke:", e);
+        console.error("Greška pri slanju:", e);
       }
     }
 
