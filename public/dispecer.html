@@ -149,12 +149,10 @@
           document.getElementById('tripForm').reset();
           loadTrips();
         } else {
-          const errData = await res.json();
-          alert('Greška pri slanju zadatka: ' + (errData.error || 'Nepoznata greška'));
+          alert('Greška pri slanju zadatka!');
         }
       } catch (err) {
         console.error(err);
-        alert('Mrežna greška pri slanju zadatka.');
       }
     }
 
@@ -165,23 +163,19 @@
         const tbody = document.getElementById('tripsTable');
         tbody.innerHTML = '';
 
-        if(Array.isArray(data)) {
-          data.forEach(t => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>#${t.nr || t.id}</td>
-              <td><b>${t.fahrzeug}</b></td>
-              <td>${t.name}</td>
-              <td>${t.von}</td>
-              <td>${t.nach}</td>
-              <td><span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px; font-weight: bold;">${t.status}</span></td>
-            `;
-            tbody.appendChild(tr);
-          });
-        }
-      } catch (err) {
-        console.error("Greška pri učitavanju zadataka:", err);
-      }
+        data.forEach(t => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>#${t.nr || t.id}</td>
+            <td><b>${t.fahrzeug}</b></td>
+            <td>${t.name}</td>
+            <td>${t.von}</td>
+            <td>${t.nach}</td>
+            <td><span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px; font-weight: bold;">${t.status}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {}
     }
 
     async function loadChat() {
@@ -192,18 +186,14 @@
         const box = document.getElementById('chatBox');
         box.innerHTML = '';
 
-        if(Array.isArray(messages)) {
-          messages.forEach(m => {
-            const div = document.createElement('div');
-            div.className = 'chat-msg';
-            div.innerHTML = `<small>[${m.time || ''}]</small> <b>${m.sender}:</b> ${m.text}`;
-            box.appendChild(div);
-          });
-          box.scrollTop = box.scrollHeight;
-        }
-      } catch (err) {
-        console.error("Greška pri učitavanju chata:", err);
-      }
+        messages.forEach(m => {
+          const div = document.createElement('div');
+          div.className = 'chat-msg';
+          div.innerHTML = `<small>[${m.time || ''}]</small> <b>${m.sender}:</b> ${m.text}`;
+          box.appendChild(div);
+        });
+        box.scrollTop = box.scrollHeight;
+      } catch (err) {}
     }
 
     async function sendChat() {
@@ -212,7 +202,7 @@
       if (!input.value.trim()) return;
 
       try {
-        const res = await fetch('/api/chat', {
+        await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -222,15 +212,9 @@
           })
         });
 
-        if (res.ok) {
-          input.value = '';
-          loadChat();
-        } else {
-          alert("Greška pri slanju poruke.");
-        }
-      } catch (err) {
-        console.error("Greška pri slanju poruke:", err);
-      }
+        input.value = '';
+        loadChat();
+      } catch (err) {}
     }
 
     setInterval(loadTrips, 3000);
