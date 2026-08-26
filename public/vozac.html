@@ -28,8 +28,8 @@
     .nav-buttons { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
     .btn-nav { background: #0dcaf0; border: 1px solid #0099bb; border-radius: 12px; padding: 5px 12px; font-size: 12px; font-weight: bold; text-decoration: none; color: #000; text-align: center; box-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
 
-    .chat-section { display: flex; flex-direction: column; height: 100%; justify-content: space-between; }
-    .chat-box { background: #fff; border: 1px solid #b0a590; height: 320px; overflow-y: auto; padding: 10px; border-radius: 4px; font-size: 13px; margin-bottom: 10px; }
+    .chat-section { display: flex; flex-direction: column; height: calc(100vh - 120px); justify-content: space-between; }
+    .chat-box { background: #fff; border: 1px solid #b0a590; height: 100%; overflow-y: auto; padding: 10px; border-radius: 4px; font-size: 13px; margin-bottom: 10px; }
     .msg-item { margin-bottom: 6px; padding: 6px 8px; border-radius: 4px; }
     .msg-disp { background: #fff3cd; color: #664d03; text-align: left; }
     .msg-driver { background: #d1e7dd; color: #0f5132; text-align: right; }
@@ -95,7 +95,7 @@
       <div id="chatView" class="chat-section" style="display: none;">
         <div class="chat-box" id="chatBox"></div>
         <div class="chat-input-row">
-          <input type="text" id="chatInput" placeholder="Nachricht an Zentrale...">
+          <input type="text" id="chatInput" placeholder="Nachricht an Zentrale..." onkeypress="if(event.key==='Enter') sendChatMessage()">
           <button class="btn-chat-send" onclick="sendChatMessage()">Senden</button>
         </div>
       </div>
@@ -111,21 +111,12 @@
       <span class="nav-icon">💬</span>
       <span>Mitteilung</span>
     </div>
-    <div class="nav-item">
-      <span class="nav-icon">📁</span>
-      <span>Verlauf</span>
-    </div>
-    <div class="nav-item">
-      <span class="nav-icon">⚙️</span>
-      <span>Einstellungen</span>
-    </div>
   </div>
 
   <script>
     let currentTripId = null;
     let currentStatusIndex = 0;
     let activeTab = 'einsatz';
-    let lastMsgCount = 0;
 
     const statusList = [
       "1. Angenommen",
@@ -139,27 +130,9 @@
       document.getElementById('voziloSelect').value = localStorage.getItem('izabranoVozilo');
     }
 
-    function playNotificationSound() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
-      } catch(e) {}
-    }
-
     function snimiVozilo() {
       const val = document.getElementById('voziloSelect').value;
       localStorage.setItem('izabranoVozilo', val);
-      lastMsgCount = 0;
       ucitajVoznje();
       ucitajChat();
     }
@@ -197,7 +170,8 @@
         const res = await fetch('/api/trips');
         const data = await res.json();
         
-        // Prihvata naloge namenjene striktno ovom vozilu
+        if (!Array.isArray(data)) return;
+
         const mojeVoznje = data.filter(t => t.fahrzeug === mojeVozilo && t.status !== '5. Erledigt');
 
         if (mojeVoznje.length > 0) {
@@ -240,7 +214,7 @@
           renderStatusBtn();
         }
       } catch (err) {
-        console.error("Greška pri učitavanju vožnji:", err);
+        console.error("Greška pri dohvatanju vožnji:", err);
       }
     }
 
@@ -250,11 +224,10 @@
 
     async function promeniStatus() {
       if (!currentTripId) {
-        alert("Nema aktivnog naloga za promenu statusa!");
+        alert("Nema aktivnog naloga!");
         return;
       }
 
-      const mojeVozilo = localStorage.getItem('izabranoVozilo');
       const sledeciIndex = (currentStatusIndex + 1) % statusList.length;
       const noviStatus = statusList[sledeciIndex];
 
@@ -262,10 +235,7 @@
         const res = await fetch(`/api/trips/${currentTripId}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            status: noviStatus,
-            changed_by: mojeVozilo || 'Vozac'
-          })
+          body: JSON.stringify({ status: noviStatus })
         });
 
         if (res.ok) {
@@ -280,15 +250,14 @@
             currentStatusIndex = 0;
             renderStatusBtn();
           }
-        } else {
-          alert('Greška pri čuvanju statusa u bazi!');
         }
       } catch (err) {
-        console.error('Mrežna greška pri promeni statusa:', err);
+        console.error('Greška pri izmeni statusa:', err);
       }
     }
 
     async function ucitajChat() {
+      if (activeTab !== 'chat') return;
       const mojeVozilo = localStorage.getItem('izabranoVozilo');
       if (!mojeVozilo) return;
 
@@ -296,12 +265,7 @@
         const res = await fetch(`/api/chat?fahrzeug=${encodeURIComponent(mojeVozilo)}`);
         const messages = await res.json();
         
-        if (messages.length > lastMsgCount) {
-          if (lastMsgCount !== 0 && messages[messages.length - 1].sender === 'Disponent') {
-            playNotificationSound();
-          }
-          lastMsgCount = messages.length;
-        }
+        if (!Array.isArray(messages)) return;
 
         const box = document.getElementById('chatBox');
         box.innerHTML = '';
@@ -309,30 +273,42 @@
         messages.forEach(m => {
           const div = document.createElement('div');
           div.className = `msg-item ${m.sender === 'Disponent' ? 'msg-disp' : 'msg-driver'}`;
-          div.innerHTML = `<small>[${m.time}]</small> <b>${m.sender}:</b> ${m.text}`;
+          div.innerHTML = `<small>[${m.time || ''}]</small> <b>${m.sender}:</b> ${m.text}`;
           box.appendChild(div);
         });
         box.scrollTop = box.scrollHeight;
-      } catch(e) {}
+      } catch(e) {
+        console.error("Greška pri dohvatanju poruka:", e);
+      }
     }
 
     async function sendChatMessage() {
       const mojeVozilo = localStorage.getItem('izabranoVozilo');
       const input = document.getElementById('chatInput');
-      if (!mojeVozilo || !input.value.trim()) return;
+      if (!mojeVozilo) {
+        alert("Izaberite vozilo gore!");
+        return;
+      }
+      if (!input.value.trim()) return;
 
-      await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fahrzeug: mojeVozilo,
-          sender: 'Vozac',
-          text: input.value
-        })
-      });
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fahrzeug: mojeVozilo,
+            sender: 'Vozac',
+            text: input.value.trim()
+          })
+        });
 
-      input.value = '';
-      ucitajChat();
+        if (res.ok) {
+          input.value = '';
+          ucitajChat();
+        }
+      } catch(e) {
+        console.error("Greška pri slanju poruke:", e);
+      }
     }
 
     setInterval(ucitajVoznje, 3000);
