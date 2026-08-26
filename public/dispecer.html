@@ -1,226 +1,397 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dispečer - ELS 3</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-    body { padding: 15px; background: #f4f6f9; }
-    h2 { margin-bottom: 15px; color: #333; }
-    
-    .layout { display: flex; gap: 20px; flex-wrap: wrap; }
-    .card { background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex: 1; min-width: 320px; }
-    
-    .form-group { margin-bottom: 10px; }
-    .form-group label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 3px; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; }
-    
-    button { background: #0d6efd; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
-    button:hover { background: #0b5ed7; }
-    
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #e9ecef; }
-    
-    .chat-box { height: 250px; overflow-y: auto; border: 1px solid #ccc; padding: 8px; border-radius: 4px; margin-bottom: 10px; background: #fafafa; }
-    .chat-msg { margin-bottom: 5px; font-size: 13px; }
-  </style>
-</head>
-<body>
-
-  <h2>Dispečerski Panel</h2>
-
-  <div class="layout">
-    <!-- FORMA ZA SLANJE ZADATKA -->
-    <div class="card">
-      <h3>Novi Zadatak (Auftrag)</h3>
-      <br>
-      <form id="tripForm" onsubmit="sendTrip(event)">
-        <div class="form-group"><label>Broj naloga (Nr):</label><input type="text" id="nr" required></div>
-        <div class="form-group"><label>Datum:</label><input type="text" id="datum" placeholder="23.08.2026"></div>
-        <div class="form-group"><label>Vreme (Zeit):</label><input type="text" id="zeit" placeholder="14:30"></div>
-        <div class="form-group"><label>Pacijent (Name):</label><input type="text" id="name" required></div>
-        <div class="form-group"><label>Kasa (Krankenkasse):</label><input type="text" id="krkasse"></div>
-        <div class="form-group"><label>Tip transporta (Art):</label><input type="text" id="art" value="Sitzend"></div>
-        <div class="form-group">
-          <label>Infekcija (LS):</label>
-          <select id="ls">
-            <option value="NEIN">NEIN</option>
-            <option value="INFEKTION">JA (Infektion)</option>
-          </select>
-        </div>
-        <div class="form-group"><label>Polazak (Abholung - Von):</label><input type="text" id="von" required></div>
-        <div class="form-group"><label>Odredište (Ziel - Nach):</label><input type="text" id="nach" required></div>
-        <div class="form-group"><label>Razlog (Grund):</label><input type="text" id="grund"></div>
-        <div class="form-group"><label>Med. oprema (Med.Ger):</label><input type="text" id="med_ger"></div>
-        <div class="form-group"><label>Napomena (Hinweis):</label><textarea id="komm" rows="2"></textarea></div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vukovic Krankentransporte - Disponenten-Panel</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #eef2f5; margin: 0; }
+        .header { background: #b02a37; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .header h1 { margin: 0; font-size: 24px; }
         
-        <div class="form-group">
-          <label>Dodeljeno vozilo (Fahrzeug):</label>
-          <select id="fahrzeug" required>
-            <option value="">-- Izaberi vozilo --</option>
-            <script>
-              for(let i=1; i<=10; i++) {
-                document.write(`<option value="Fahrzeug ${i}">Fahrzeug ${i}</option>`);
-              }
-            </script>
-          </select>
-        </div>
+        .main-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .main-layout { grid-template-columns: 1fr; } }
 
-        <button type="submit">Pošalji Zadatak Vozaču</button>
-      </form>
-    </div>
-
-    <!-- CHAT DISPEČERA -->
-    <div class="card">
-      <h3>Poruke (Mitteilungen)</h3>
-      <br>
-      <div class="form-group">
-        <label>Izaberi vozilo za Chat:</label>
-        <select id="chatFahrzeug" onchange="loadChat()">
-          <option value="Fahrzeug 1">Fahrzeug 1</option>
-          <script>
-            for(let i=2; i<=10; i++) {
-              document.write(`<option value="Fahrzeug ${i}">Fahrzeug ${i}</option>`);
-            }
-          </script>
-        </select>
-      </div>
-
-      <div class="chat-box" id="chatBox"></div>
-
-      <div class="form-group" style="display: flex; gap: 5px;">
-        <input type="text" id="chatInput" placeholder="Napiši poruku vozaču..." onkeypress="if(event.key==='Enter') sendChat()">
-        <button type="button" onclick="sendChat()" style="width: 100px;">Pošalji</button>
-      </div>
-    </div>
-  </div>
-
-  <br>
-
-  <!-- TABELA AKTIVNIH NALOGA -->
-  <div class="card">
-    <h3>Pregled Naloga</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Nr</th>
-          <th>Vozilo</th>
-          <th>Pacijent</th>
-          <th>Polazak</th>
-          <th>Odredište</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="tripsTable"></tbody>
-    </table>
-  </div>
-
-  <script>
-    async function sendTrip(e) {
-      e.preventDefault();
-      const payload = {
-        nr: document.getElementById('nr').value,
-        datum: document.getElementById('datum').value,
-        zeit: document.getElementById('zeit').value,
-        name: document.getElementById('name').value,
-        krkasse: document.getElementById('krkasse').value,
-        art: document.getElementById('art').value,
-        ls: document.getElementById('ls').value,
-        von: document.getElementById('von').value,
-        nach: document.getElementById('nach').value,
-        grund: document.getElementById('grund').value,
-        med_ger: document.getElementById('med_ger').value,
-        komm: document.getElementById('komm').value,
-        fahrzeug: document.getElementById('fahrzeug').value,
-        status: '1. Angenommen'
-      };
-
-      try {
-        const res = await fetch('/api/trips', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          alert('Zadatak uspešno poslat!');
-          document.getElementById('tripForm').reset();
-          loadTrips();
-        } else {
-          alert('Greška pri slanju zadatka!');
+        .form-card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+        input, select, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; box-sizing: border-box; }
+        button.btn-submit { background: #198754; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+        .btn-reset { background: #dc3545; color: white; border: none; font-weight: bold; cursor: pointer; padding: 12px; margin-top: 20px; border-radius: 6px; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; font-size: 13px; }
+        th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        th { background: #b02a37; color: white; }
+        
+        /* CHAT ZENTRALE */
+        .chat-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: 580px; display: flex; flex-direction: column; border: 2px solid #ccc; transition: border-color 0.3s; }
+        .chat-card.nova-poruka { border-color: #dc3545; animation: blink-border 1s infinite; }
+        
+        @keyframes blink-border {
+            0% { box-shadow: 0 0 10px rgba(220, 53, 69, 0.8); }
+            50% { box-shadow: 0 0 0px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 10px rgba(220, 53, 69, 0.8); }
         }
-      } catch (err) {
-        console.error(err);
-      }
-    }
 
-    async function loadTrips() {
-      try {
-        const res = await fetch('/api/trips');
-        const data = await res.json();
-        const tbody = document.getElementById('tripsTable');
-        tbody.innerHTML = '';
+        .chat-header-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .badge-poruke { background: #dc3545; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; display: none; }
 
-        data.forEach(t => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>#${t.nr || t.id}</td>
-            <td><b>${t.fahrzeug}</b></td>
-            <td>${t.name}</td>
-            <td>${t.von}</td>
-            <td>${t.nach}</td>
-            <td><span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px; font-weight: bold;">${t.status}</span></td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {}
-    }
+        .chat-box { flex-grow: 1; overflow-y: auto; background: #f8f9fa; border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .chat-msg { padding: 8px 12px; border-radius: 6px; font-size: 13px; max-width: 85%; }
+        .chat-msg.dispo { background: #d1e7dd; align-self: flex-end; border: 1px solid #badbcc; }
+        .chat-msg.fahrer { background: #fff3cd; align-self: flex-start; border: 1px solid #ffecb5; }
 
-    async function loadChat() {
-      const fahrzeug = document.getElementById('chatFahrzeug').value;
-      try {
-        const res = await fetch(`/api/chat?fahrzeug=${encodeURIComponent(fahrzeug)}`);
-        const messages = await res.json();
-        const box = document.getElementById('chatBox');
-        box.innerHTML = '';
+        .tab-buttons { margin-bottom: 15px; }
+        .tab-btn { width: auto; padding: 10px 20px; margin-right: 5px; background: #6c757d; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; position: relative; }
+        .tab-btn.active { background: #b02a37; }
 
-        messages.forEach(m => {
-          const div = document.createElement('div');
-          div.className = 'chat-msg';
-          div.innerHTML = `<small>[${m.time || ''}]</small> <b>${m.sender}:</b> ${m.text}`;
-          box.appendChild(div);
-        });
-        box.scrollTop = box.scrollHeight;
-      } catch (err) {}
-    }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
-    async function sendChat() {
-      const fahrzeug = document.getElementById('chatFahrzeug').value;
-      const input = document.getElementById('chatInput');
-      if (!input.value.trim()) return;
+        .btn-tab-v { width: auto; padding: 6px 12px; margin: 0; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body onclick="aktivirajAudio()">
 
-      try {
-        await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            fahrzeug: fahrzeug,
-            sender: 'Disponent',
-            text: input.value.trim()
-          })
-        });
+    <div class="header">
+        <h1>VUKOVIC KRANKENTRANSPORTE</h1>
+        <small>Disponenten-Steuerungssystem</small>
+    </div>
 
-        input.value = '';
-        loadChat();
-      } catch (err) {}
-    }
+    <div class="tab-buttons">
+        <button id="tabLiveBtn" class="tab-btn active" onclick="otvoriTab('radnaTabla', event)">📋 Live-Aufträge & Chat</button>
+        <button class="tab-btn" onclick="otvoriTab('historijaTab', event)">📂 Archiv & Fahrtenbuch</button>
+    </div>
 
-    setInterval(loadTrips, 3000);
-    setInterval(loadChat, 2000);
-    loadTrips();
-    loadChat();
-  </script>
+    <div id="radnaTabla" class="tab-content active">
+        <div class="main-layout">
+            <div>
+                <div class="form-card">
+                    <h3>Neuen Transportauftrag erstellen</h3>
+                    <div class="grid-form">
+                        <div>
+                            <label><b>Fahrzeug:</b></label>
+                            <select id="vozilo">
+                                <option value="Fahrzeug 1">Fahrzeug 1</option>
+                                <option value="Fahrzeug 2">Fahrzeug 2</option>
+                                <option value="Fahrzeug 3">Fahrzeug 3</option>
+                                <option value="Fahrzeug 4">Fahrzeug 4</option>
+                                <option value="Fahrzeug 5">Fahrzeug 5</option>
+                                <option value="Fahrzeug 6">Fahrzeug 6</option>
+                                <option value="Fahrzeug 7">Fahrzeug 7</option>
+                                <option value="Fahrzeug 8">Fahrzeug 8</option>
+                                <option value="Fahrzeug 9">Fahrzeug 9</option>
+                                <option value="Fahrzeug 10">Fahrzeug 10</option>
+                            </select>
+                        </div>
+                        <div><label><b>Patient:</b></label><input type="text" id="pacijent" placeholder="Name"></div>
+                        <div><label><b>Krankenkasse:</b></label><input type="text" id="kasa" placeholder="AOK..."></div>
+                        <div><label><b>Datum:</b></label><input type="date" id="datum"></div>
+                        <div><label><b>Zeit:</b></label><input type="time" id="vreme"></div>
+                        <div>
+                            <label><b>Art:</b></label>
+                            <select id="tipTransporta">
+                                <option value="Sitzend">🚶 Sitzend</option>
+                                <option value="Liegend">🛏️ Liegend</option>
+                            </select>
+                        </div>
+                        <div><label><b>Von (Start):</b></label><input type="text" id="adresaPolazak" placeholder="Adresse"></div>
+                        <div><label><b>Nach (Ziel):</b></label><input type="text" id="adresaOdrediste" placeholder="Adresse"></div>
+                        <div>
+                            <label><b>Infektion:</b></label>
+                            <select id="infekcija">
+                                <option value="NEIN">NEIN</option>
+                                <option value="JA">JA</option>
+                            </select>
+                        </div>
+                        <div><label><b>Hinweis:</b></label><input type="text" id="napomena" placeholder="Info"></div>
+                    </div>
+                    <button class="btn-submit" onclick="dodajNalog()">Auftrag senden</button>
+                </div>
+
+                <h3>Aktive Aufträge</h3>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nr.</th>
+                                <th>Zeit</th>
+                                <th>Fahrzeug</th>
+                                <th>Patient</th>
+                                <th>Art</th>
+                                <th>Von</th>
+                                <th>Nach</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaNaloga"></tbody>
+                    </table>
+                </div>
+                <button class="btn-reset" onclick="resetujNoviDan()">Neuen Tag starten</button>
+            </div>
+
+            <!-- CHAT ZENTRALE SA PRIVATNIM KANALIMA ZA SVAKO VOZILO -->
+            <div class="chat-card" id="chatCard">
+                <div class="chat-header-title">
+                    <h3 style="margin:0;">💬 Privatni Chat po Vozilu</h3>
+                </div>
+
+                <div style="display:flex; gap:4px; overflow-x:auto; padding-bottom:8px; margin-bottom:5px;" id="chatVozilaTabs"></div>
+
+                <div id="chatBoxDispo" class="chat-box" onclick="oznaciProcitanoDispo()"></div>
+                
+                <div style="display:flex; gap:6px;">
+                    <input type="text" id="chatInputDispo" placeholder="Poruka za izabrano vozilo..." onkeypress="if(event.key==='Enter') posaljiPorukuDispo()">
+                    <button class="btn-submit" style="margin:0; width:100px;" onclick="posaljiPorukuDispo()">Senden</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="historijaTab" class="tab-content">
+        <div class="form-card">
+            <h3>Archivsuche</h3>
+            <div class="grid-form">
+                <div><label><b>Datum:</b></label><input type="date" id="filterDatum" onchange="ucitajHistoriju()"></div>
+                <div>
+                    <label><b>Fahrzeug:</b></label>
+                    <select id="filterVozilo" onchange="ucitajHistoriju()">
+                        <option value="Sva vozila">Alle Fahrzeuge</option>
+                        <option value="Fahrzeug 1">Fahrzeug 1</option>
+                        <option value="Fahrzeug 2">Fahrzeug 2</option>
+                        <option value="Fahrzeug 3">Fahrzeug 3</option>
+                        <option value="Fahrzeug 4">Fahrzeug 4</option>
+                        <option value="Fahrzeug 5">Fahrzeug 5</option>
+                        <option value="Fahrzeug 6">Fahrzeug 6</option>
+                        <option value="Fahrzeug 7">Fahrzeug 7</option>
+                        <option value="Fahrzeug 8">Fahrzeug 8</option>
+                        <option value="Fahrzeug 9">Fahrzeug 9</option>
+                        <option value="Fahrzeug 10">Fahrzeug 10</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nr.</th><th>Datum</th><th>Zeit</th><th>Fahrzeug</th><th>Patient</th><th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaHistorija"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const danasnjiDatum = new Date().toISOString().split('T')[0];
+        document.getElementById('datum').value = danasnjiDatum;
+        document.getElementById('filterDatum').value = danasnjiDatum;
+
+        let aktivnoVoziloChat = "Fahrzeug 1";
+        let neprocitanePoruke = {};
+        let audioCtx = null;
+
+        function aktivirajAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function svirajZvuk() {
+            try {
+                aktivirajAudio();
+                if (!audioCtx) return;
+
+                const sada = audioCtx.currentTime;
+                [0, 0.2, 0.4].forEach((delay) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(880, sada + delay);
+                    
+                    gain.gain.setValueAtTime(0.4, sada + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.01, sada + delay + 0.15);
+
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.start(sada + delay);
+                    osc.stop(sada + delay + 0.15);
+                });
+            } catch(e) {}
+        }
+
+        function otvoriTab(tabName, evt) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            if(evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+            
+            if(tabName === 'historijaTab') {
+                ucitajHistoriju();
+            }
+        }
+
+        function kreirajteChatTabove() {
+            const tabsContainer = document.getElementById('chatVozilaTabs');
+            tabsContainer.innerHTML = '';
+            
+            for (let i = 1; i <= 10; i++) {
+                const vName = `Fahrzeug ${i}`;
+                const isActive = vName === aktivnoVoziloChat ? 'background:#b02a37; color:white;' : 'background:#e0e0e0; color:#333;';
+                const hasBadge = neprocitanePoruke[vName] ? '🔴 ' : '';
+                
+                tabsContainer.innerHTML += `
+                    <button class="btn-tab-v" onclick="promeniChatVozilo('${vName}')" style="${isActive}">
+                        ${hasBadge}F${i}
+                    </button>
+                `;
+            }
+        }
+
+        function promeniChatVozilo(vName) {
+            aktivnoVoziloChat = vName;
+            neprocitanePoruke[vName] = false;
+            kreirajteChatTabove();
+            ucitajPoruke();
+        }
+
+        function oznaciProcitanoDispo() {
+            neprocitanePoruke[aktivnoVoziloChat] = false;
+            kreirajteChatTabove();
+        }
+
+        async function dodajNalog() {
+            const vozilo = document.getElementById('vozilo').value;
+            const pacijent = document.getElementById('pacijent').value;
+            const kasa = document.getElementById('kasa').value;
+            const datum = document.getElementById('datum').value;
+            const vreme = document.getElementById('vreme').value;
+            const tipTransporta = document.getElementById('tipTransporta').value;
+            const adresaPolazak = document.getElementById('adresaPolazak').value;
+            const adresaOdrediste = document.getElementById('adresaOdrediste').value;
+            const infekcija = document.getElementById('infekcija').value;
+            const napomena = document.getElementById('napomena').value;
+
+            if(!pacijent || !adresaPolazak) return alert('Bitte Patientenname und Abholadresse ausfüllen!');
+
+            await fetch('/api/voznje', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ vozilo, pacijent, kasa, datum, vreme, tipTransporta, adresaPolazak, adresaOdrediste, infekcija, napomena })
+            });
+
+            document.getElementById('pacijent').value = '';
+            document.getElementById('adresaPolazak').value = '';
+            ucitaj();
+        }
+
+        async function ucitaj() {
+            try {
+                const res = await fetch('/api/voznje');
+                const podaci = await res.json();
+                const tabela = document.getElementById('tabelaNaloga');
+                tabela.innerHTML = '';
+
+                podaci.forEach(v => {
+                    tabela.innerHTML += `
+                        <tr>
+                            <td><b>#${v.id}</b></td>
+                            <td>${v.vreme || '-'}</td>
+                            <td><b>${v.vozilo}</b></td>
+                            <td>${v.pacijent}</td>
+                            <td>${v.tipTransporta || 'Sitzend'}</td>
+                            <td>${v.adresaPolazak}</td>
+                            <td>${v.adresaOdrediste || '-'}</td>
+                            <td><span style="color: blue; font-weight: bold;">${v.status}</span></td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {}
+            ucitajPoruke();
+        }
+
+        async function ucitajHistoriju() {
+            const datum = document.getElementById('filterDatum').value;
+            const vozilo = document.getElementById('filterVozilo').value;
+            try {
+                const res = await fetch(`/api/historija?datum=${datum}&vozilo=${vozilo}`);
+                const podaci = await res.json();
+                const tabela = document.getElementById('tabelaHistorija');
+                tabela.innerHTML = '';
+
+                podaci.forEach(v => {
+                    tabela.innerHTML += `
+                        <tr>
+                            <td><b>#${v.id}</b></td>
+                            <td>${v.datum}</td>
+                            <td>${v.vreme || '-'}</td>
+                            <td><b>${v.vozilo}</b></td>
+                            <td>${v.pacijent}</td>
+                            <td>${v.status}</td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {}
+        }
+
+        async function ucitajPoruke() {
+            try {
+                const res = await fetch('/api/poruke');
+                const poruke = await res.json();
+                const box = document.getElementById('chatBoxDispo');
+                box.innerHTML = '';
+
+                const filtriranePoruke = poruke.filter(p => p.vozilo === aktivnoVoziloChat);
+
+                poruke.forEach(p => {
+                    if (p.posiljalac !== 'Zentrale' && p.vozilo !== aktivnoVoziloChat) {
+                        neprocitanePoruke[p.vozilo] = true;
+                    }
+                });
+                kreirajteChatTabove();
+
+                filtriranePoruke.forEach(p => {
+                    const isDispo = p.posiljalac === 'Zentrale';
+                    const msgClass = isDispo ? 'chat-msg dispo' : 'chat-msg fahrer';
+                    box.innerHTML += `
+                        <div class="${msgClass}">
+                            <b>${p.posiljalac}:</b> ${p.tekst}
+                        </div>
+                    `;
+                });
+                box.scrollTop = box.scrollHeight;
+            } catch(e) {}
+        }
+
+        async function posaljiPorukuDispo() {
+            const input = document.getElementById('chatInputDispo');
+            const tekst = input.value.trim();
+
+            if(!tekst) return;
+
+            await fetch('/api/poruke', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ posiljalac: 'Zentrale', vozilo: aktivnoVoziloChat, tekst })
+            });
+
+            input.value = '';
+            ucitajPoruke();
+        }
+
+        async function resetujNoviDan() {
+            if(confirm("Möchten Sie die Live-Tafel zurücksetzen?")) {
+                await fetch('/api/reset', { method: 'POST' });
+                ucitaj();
+            }
+        }
+
+        kreirajteChatTabove();
+        setInterval(ucitaj, 3000);
+        ucitaj();
+    </script>
 </body>
 </html>
